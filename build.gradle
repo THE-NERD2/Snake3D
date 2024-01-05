@@ -1,0 +1,28 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.9.21'
+    id "com.github.johnrengelman.shadow" version "7.1.2"
+}
+
+group = 'org.snake3d'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+}
+
+dependencies {
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("com.badlogicgames.gdx:gdx:1.12.1")
+    implementation("com.badlogicgames.gdx:gdx-backend-lwjgl3:1.12.1")
+    implementation("com.badlogicgames.gdx:gdx-platform:1.12.1:natives-desktop")
+    implementation("io.github.libktx:ktx-async:1.12.1-rc1")
+}
+
+test {
+    useJUnitPlatform()
+}
+kotlin {
+    jvmToolchain(17)
+}
