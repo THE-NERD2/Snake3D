@@ -6,7 +6,10 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Input.Keys
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
-import com.badlogic.gdx.graphics.*
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.PerspectiveCamera
+import com.badlogic.gdx.graphics.VertexAttributes
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g3d.*
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute
@@ -18,7 +21,6 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.utils.GdxRuntimeException
 import com.badlogic.gdx.utils.Timer.Task
-import com.badlogic.gdx.utils.viewport.FitViewport
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ktx.async.KtxAsync
@@ -59,8 +61,10 @@ class Snake3D: ApplicationListener {
     private val eventLock = Any()
     override fun create() {
         player = Player()
-        stage = Stage(FitViewport(800f, 800f, OrthographicCamera()))
+        stage = Stage()
         scoreLabel = Label("Score: 0", Label.LabelStyle(BitmapFont(), Color.BLACK))
+        scoreLabel.x = 10f
+        scoreLabel.y = 10f
         stage.addActor(scoreLabel)
         nonPlayerTiles = arrayListOf(
             Tile(1f, 0f, 0f, EntityType.WALL),
@@ -159,7 +163,8 @@ class Snake3D: ApplicationListener {
     }
     override fun resize(width: Int, height: Int) {
         Gdx.gl.glViewport(0, 0, width, height)
-        stage.viewport = FitViewport(width.toFloat(), height.toFloat(), OrthographicCamera())
+        // This makes the stage disappear
+        //stage.viewport = FitViewport(width.toFloat(), height.toFloat(), OrthographicCamera())
     }
     override fun pause() {}
     override fun resume() {}
