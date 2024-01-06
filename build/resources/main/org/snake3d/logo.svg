@@ -1,0 +1,6 @@
+<svg width="128" height="128">
+    <rect x="96" y="48" width="16" height="16" style="fill: red; stroke: none;"/>
+    <rect x="32" y="48" width="32" height="16" style="fill: green; stroke: none;"/>
+    <rect x="32" y="64" width="16" height="64" style="fill: green; stroke: none;"/>
+    <text x="64" y="112" style="fill: blue; font-size: 48px;">3D</text>
+</svg>

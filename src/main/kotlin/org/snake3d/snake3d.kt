@@ -526,6 +526,7 @@ fun main() {
     KtxAsync.launch {
         val config = Lwjgl3ApplicationConfiguration()
         config.setTitle("Snake3D")
+        config.setWindowIcon("org/snake3d/logo.png")
         config.setWindowedMode(800, 600)
         config.useVsync(true)
         config.setForegroundFPS(60)
