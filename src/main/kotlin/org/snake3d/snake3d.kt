@@ -36,6 +36,21 @@ import kotlin.system.exitProcess
     Measurements:
         - Game area is 49x49x49 game pixels (center with 24 in every direction)
         - Each game pixel is 1x1x1 units
+    TODO:
+        - UI (1.1)
+        - Highscores (1.1)
+        - Different camera option/control (stays close to the front of the snake) (1.1)
+        - Multiplayer (1.2)
+        - Random default username (1.2)
+            - If you get the Alfonzo the Fat, something good happens (1.2)
+        - Leaderboard (1.2)
+        - Custom difficulties/difficulty files (1.3)
+        (Intermediate versions allowed if necessary)
+    Version numbering:
+        a.b.c
+        c: bug fix/minor improvements, e.g. graphics improvements
+        b: new features
+        a: major reworking
  */
 class Snake3D: ApplicationListener {
     private val env = Environment()
@@ -284,15 +299,15 @@ class Snake3D: ApplicationListener {
                 fun left(dir: Direction) = when(dir) {
                     Direction.UP -> Direction.FRONT
                     Direction.DOWN -> Direction.BACK
-                    Direction.FRONT -> Direction.UP
-                    Direction.BACK -> Direction.DOWN
+                    Direction.FRONT -> Direction.DOWN
+                    Direction.BACK -> Direction.UP
                     else -> impossibleCase()
                 }
                 fun right(dir: Direction) = when(dir) {
                     Direction.UP -> Direction.BACK
                     Direction.DOWN -> Direction.FRONT
-                    Direction.FRONT -> Direction.DOWN
-                    Direction.BACK -> Direction.UP
+                    Direction.FRONT -> Direction.UP
+                    Direction.BACK -> Direction.DOWN
                     else -> impossibleCase()
                 }
                 fun front(dir: Direction) = when(dir) {
@@ -509,7 +524,7 @@ enum class RotationDirection {
 }
 var snake3D: Snake3D? = null
 val open = ConcurrentHashMap<String, Boolean>()
-lateinit var interval: Task
+lateinit var gameLoopInterval: Task
 fun main() {
     snake3D = Snake3D()
     open["open"] = false
@@ -538,7 +553,7 @@ fun main() {
 fun gameLoop(snake3D: Snake3D) {
     fun tick() {
         if(snake3D.dead) {
-            interval.cancel()
+            gameLoopInterval.cancel()
             return
         }
         snake3D.schedule {
@@ -547,14 +562,14 @@ fun gameLoop(snake3D: Snake3D) {
             snake3D.nonPlayerTiles[snake3D.arrowI] = Tile(0f, 0f, 0f, EntityType.ARROW) // Arrow constructor not dependent on x, y, or z
             snake3D.nonPlayerTiles[snake3D.fruitArrowI].model.dispose()
             snake3D.nonPlayerTiles[snake3D.fruitArrowI] = Tile(0f, 0f, 0f, EntityType.FRUIT_ARROW)
-            val tile = snake3D.player.parts[0]
             // First look at the origin so that we can correctly orient the camera
             // (otherwise the camera begins to rotate wildly)
             snake3D.cam.lookAt(0f, 0f, 0f)
             snake3D.cam.up.x = 0f
             snake3D.cam.up.y = 1f
             snake3D.cam.up.z = 0f
-            // Now we can look at the snake
+            // Smooth camera (look only a certain distance to the predicted spot of the snake
+            val tile = snake3D.player.parts[0]
             if(Gdx.input.isKeyPressed(Keys.F)) {
                 snake3D.cam.position.x = 0.6f * tile.x
                 snake3D.cam.position.y = 0.6f * tile.y
@@ -564,11 +579,11 @@ fun gameLoop(snake3D: Snake3D) {
                 snake3D.cam.position.y = 0f
                 snake3D.cam.position.z = 3f
             }
-            snake3D.cam.lookAt(tile.x, tile.y, tile.z)
+            snake3D.cam.lookAt(Vector3(tile.x, tile.y, tile.z))
             snake3D.cam.update()
         }
     }
-    interval = interval(0.1f, 0f) {
+    gameLoopInterval = interval(0.1f, 0f) {
         tick()
     }
 }
