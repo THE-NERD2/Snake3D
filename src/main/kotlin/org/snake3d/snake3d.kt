@@ -26,6 +26,7 @@ import kotlinx.coroutines.withContext
 import ktx.async.KtxAsync
 import ktx.async.interval
 import ktx.async.newSingleThreadAsyncContext
+import java.util.Collections.max
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlin.math.floor
@@ -45,9 +46,11 @@ import kotlin.system.exitProcess
             - If you get the Alfonzo the Fat, something good happens (1.2)
         - Leaderboard (1.2)
         - Custom difficulties/difficulty files (1.3)
+        - Add position markers (some object at each of the coordinates of the fruit and the snake) (1.3)
         (Intermediate versions allowed if necessary)
     Version numbering:
-        a.b.c
+        a.b.c-d
+        d: UI changes that cannot fit into any other category
         c: bug fix/minor improvements, e.g. graphics improvements
         b: new features
         a: major reworking
@@ -71,9 +74,14 @@ class Snake3D: ApplicationListener {
     var restarting = false
     var dead = false
     var score = 0
+    val turning = ConcurrentHashMap<String, Boolean>()
 
-    private val events = ConcurrentHashMap<String, ArrayList<() -> Unit>>()
-    private val eventLock = Any()
+    private val events = ConcurrentHashMap<Int, () -> Unit>()
+    // Initialize things that don't depend on an instance of Gdx
+    init {
+        turning["turning"] = false
+    }
+    // Initialize things that do depend on an instance of Gdx
     override fun create() {
         player = Player()
         stage = Stage()
@@ -92,7 +100,6 @@ class Snake3D: ApplicationListener {
             Tile((-24..24).random().toFloat(), (-24..24).random().toFloat(), (-24..24).random().toFloat(), EntityType.FRUIT)
         )
         nonPlayerTiles.add(Tile(0f, 0f, 0f, EntityType.FRUIT_ARROW)) // This constructor depends on existing nonPlayerTiles
-        events["events"] = arrayListOf()
         modelBatch = ModelBatch() // Apparently this constructor depends on Gdx.gl
         env.set(ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f))
         env.add(DirectionalLight().set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f))
@@ -186,14 +193,19 @@ class Snake3D: ApplicationListener {
     fun die() {
         dead = true
     }
-    fun schedule(event: () -> Unit) = synchronized(eventLock) {
-        events["events"]!!.add(event)
-    }
-    private fun resolveScheduledEvents() = synchronized(eventLock) {
-        for(event in events["events"]!!) {
-            run(event)
+    fun schedule(event: () -> Unit) {
+        val keyList = events.keys().toList()
+        if(keyList.isEmpty()) {
+            events[0] = event
+        } else {
+            events[max(keyList) + 1] = event
         }
-        events["events"]!!.clear()
+    }
+    private fun resolveScheduledEvents() {
+        events.forEach {
+            run(it.value)
+        }
+        events.clear()
     }
     inner class Player {
         val parts = arrayListOf(Tile(1f, 0f, 0f, EntityType.PLAYER), Tile(0f, 0f, 0f, EntityType.PLAYER), Tile(-1f, 0f, 0f, EntityType.PLAYER))
@@ -363,16 +375,23 @@ class Snake3D: ApplicationListener {
                 }
                 return Direction.rotate(axisAndDirection.first, axisAndDirection.second, op)
             }
-            val originalDirection = direction
-            direction = when(dir) {
-                Direction.UP -> upDirection
-                Direction.DOWN -> inv(upDirection)
-                Direction.LEFT -> left(direction, upDirection)
-                Direction.RIGHT -> right(direction, upDirection)
-                else -> throw Exception("Illegal key direction: $dir")
-            }
-            if(direction == upDirection || direction == inv(upDirection)) {
-                upDirection = performOperation(originalDirection, direction, upDirection)
+            if(!turning["turning"]!!) {
+                turning["turning"] = true
+                val originalDirection = direction
+                direction = when(dir) {
+                    Direction.UP -> upDirection
+                    Direction.DOWN -> inv(upDirection)
+                    Direction.LEFT -> left(direction, upDirection)
+                    Direction.RIGHT -> right(direction, upDirection)
+                    else -> throw Exception("Illegal key direction: $dir")
+                }
+                if(direction == upDirection || direction == inv(upDirection)) {
+                    upDirection = performOperation(originalDirection, direction, upDirection)
+                }
+            } else {
+                schedule {
+                    processKey(dir)
+                }
             }
         }
         private fun nextInside(x: Float, y: Float, z: Float): Boolean {
@@ -391,6 +410,7 @@ class Snake3D: ApplicationListener {
             return floor(x) == floor(fruit.x) && floor(y) == floor(fruit.y) && floor(z) == floor(fruit.z)
         }
         fun move() {
+            turning["turning"] = false
             val first = parts[0]
             val nextX = first.x + directionVector.x
             val nextY = first.y + directionVector.y
