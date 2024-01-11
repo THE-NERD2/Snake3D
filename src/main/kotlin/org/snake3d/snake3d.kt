@@ -38,24 +38,38 @@ import kotlin.system.exitProcess
         - Game area is 49x49x49 game pixels (center with 24 in every direction)
         - Each game pixel is 1x1x1 units
     TODO:
-        - UI (1.1)
-        - Highscores (1.1)
-        - Different camera option/control (stays close to the front of the snake) (1.1)
-        - Multiplayer (1.2)
-        - Random default username (1.2)
-            - If you get the Alfonzo the Fat, something good happens (1.2)
-        - Leaderboard (1.2)
-        - Custom difficulties/difficulty files (1.3)
-        - Add position markers (some object at each of the coordinates of the fruit and the snake) (1.3)
+        * Code refactoring required to run the UI (2.0)
+        * UI (2.1)
+        * Highscores (2.1)
+        * Different camera option/control (stays close to the front of the snake) (2.1)
+        - Multiplayer (3.0)
+        - Random default username (3.1)
+            - If you get the Alfonzo the Fat, something good happens (3.1)
+        - Leaderboard (3.1)
+        - Custom difficulties/difficulty files (3.2)
+        - Add position markers (some object at each of the coordinates of the fruit and the snake) (3.3)
         (Intermediate versions allowed if necessary)
     Version numbering:
         a.b.c-d
         d: UI changes that cannot fit into any other category
-        c: bug fix/minor improvements, e.g. graphics improvements
+        c: bug fix/minor improvements, e.g. graphics improvements or minor UI changes
         b: new features
-        a: major reworking
+        a: major reworking/migration/changes
  */
-class Snake3D: ApplicationListener {
+class Snake3D(listener: ApplicationListener): ApplicationListener {
+    var listener = listener
+        set(newValue) {
+            newValue.create()
+            field = newValue
+        }
+    override fun create() = listener.create()
+    override fun render() = listener.render()
+    override fun dispose() = listener.dispose()
+    override fun resize(width: Int, height: Int) = listener.resize(width, height)
+    override fun pause() = listener.pause()
+    override fun resume() = listener.resume()
+}
+class Snake3DGame: ApplicationListener {
     private val env = Environment()
     private lateinit var modelBatch: ModelBatch
     lateinit var cam: PerspectiveCamera
@@ -114,23 +128,23 @@ class Snake3D: ApplicationListener {
             override fun keyDown(keyCode: Int): Boolean {
                 when(keyCode) {
                     Keys.UP, Keys.W -> {
-                        this@Snake3D.schedule {
-                            this@Snake3D.player.processKey(Direction.UP)
+                        this@Snake3DGame.schedule {
+                            this@Snake3DGame.player.processKey(Direction.UP)
                         }
                     }
                     Keys.DOWN, Keys.S -> {
-                        this@Snake3D.schedule {
-                            this@Snake3D.player.processKey(Direction.DOWN)
+                        this@Snake3DGame.schedule {
+                            this@Snake3DGame.player.processKey(Direction.DOWN)
                         }
                     }
                     Keys.LEFT, Keys.A -> {
-                        this@Snake3D.schedule {
-                            this@Snake3D.player.processKey(Direction.LEFT)
+                        this@Snake3DGame.schedule {
+                            this@Snake3DGame.player.processKey(Direction.LEFT)
                         }
                     }
                     Keys.RIGHT, Keys.D -> {
-                        this@Snake3D.schedule {
-                            this@Snake3D.player.processKey(Direction.RIGHT)
+                        this@Snake3DGame.schedule {
+                            this@Snake3DGame.player.processKey(Direction.RIGHT)
                         }
                     }
                     Keys.R -> {
@@ -138,9 +152,9 @@ class Snake3D: ApplicationListener {
                         // of all the objects. This stops the LibGDX game loop. The exception is caught by the coroutine
                         // to remove the stack trace, but the Lwjgl3Application has been stopped, opening the way for
                         // main() to be called again.
-                        this@Snake3D.restarting = true
-                        this@Snake3D.dead = true
-                        this@Snake3D.dispose()
+                        this@Snake3DGame.restarting = true
+                        this@Snake3DGame.dead = true
+                        this@Snake3DGame.dispose()
                         main()
                     }
                 }
@@ -433,6 +447,14 @@ class Snake3D: ApplicationListener {
         }
     }
 }
+class Snake3DGUI: ApplicationListener {
+    override fun create() {}
+    override fun render() {}
+    override fun dispose() {}
+    override fun resize(width: Int, height: Int) {}
+    override fun pause() {}
+    override fun resume() {}
+}
 data class Tile(val x: Float, val y: Float, val z: Float, val type: EntityType) {
     val model: Model
     val instance: ModelInstance
@@ -473,9 +495,9 @@ data class Tile(val x: Float, val y: Float, val z: Float, val type: EntityType) 
             }
         } else if(type == EntityType.ARROW) {
             val modelBuilder = ModelBuilder()
-            val frontPart = snake3D!!.player.parts[0]
-            val direction = snake3D!!.player.directionVector
-            val upDirection = snake3D!!.player.upDirectionVector
+            val frontPart = (snake3D!!.listener as Snake3DGame).player.parts[0]
+            val direction = (snake3D!!.listener as Snake3DGame).player.directionVector
+            val upDirection = (snake3D!!.listener as Snake3DGame).player.upDirectionVector
             model = modelBuilder.createArrow(
                 Vector3(frontPart.x + direction.x / 2, frontPart.y + direction.y / 2, frontPart.z + direction.z / 2),
                 Vector3(frontPart.x + direction.x / 2 + upDirection.x * 2, frontPart.y + direction.y / 2 + upDirection.y * 2, frontPart.z + direction.z / 2 + upDirection.z * 2),
@@ -485,8 +507,8 @@ data class Tile(val x: Float, val y: Float, val z: Float, val type: EntityType) 
             instance = ModelInstance(model)
         } else if(type == EntityType.FRUIT_ARROW) {
             val modelBuilder = ModelBuilder()
-            val frontPart = snake3D!!.player.parts[0]
-            val fruit = snake3D!!.nonPlayerTiles[snake3D!!.fruitI]
+            val frontPart = (snake3D!!.listener as Snake3DGame).player.parts[0]
+            val fruit = (snake3D!!.listener as Snake3DGame).nonPlayerTiles[(snake3D!!.listener as Snake3DGame).fruitI]
             val arrowV = Vector3(fruit.x - frontPart.x, fruit.y - frontPart.y, fruit.z - frontPart.z)
             val mag = sqrt(arrowV.x * arrowV.x + arrowV.y * arrowV.y + arrowV.z * arrowV.z)
             if(mag > 1f) {
@@ -546,7 +568,11 @@ var snake3D: Snake3D? = null
 val open = ConcurrentHashMap<String, Boolean>()
 lateinit var gameLoopInterval: Task
 fun main() {
-    snake3D = Snake3D()
+    // PLACEHOLDER; will launch Snake3D as a Snake3DGUI and in that gui there will be an option that will call this function
+    start()
+}
+fun start() {
+    snake3D = Snake3D(Snake3DGame())
     open["open"] = false
     KtxAsync.initiate()
     val executor = newSingleThreadAsyncContext()
@@ -555,12 +581,12 @@ fun main() {
             println("Preparing game loop...")
             while(!open["open"]!!) continue
             println("Launching game loop...")
-            gameLoop(snake3D!!)
+            gameLoop(snake3D!!.listener as Snake3DGame)
         }
     }
     KtxAsync.launch {
         val config = Lwjgl3ApplicationConfiguration()
-        config.setTitle("Snake3D")
+        config.setTitle("Snake3DGame")
         config.setWindowIcon("org/snake3d/logo.png")
         config.setWindowedMode(800, 600)
         config.useVsync(true)
@@ -570,7 +596,7 @@ fun main() {
         } catch(_: GdxRuntimeException) {}
     }
 }
-fun gameLoop(snake3D: Snake3D) {
+fun gameLoop(snake3D: Snake3DGame) {
     fun tick() {
         if(snake3D.dead) {
             gameLoopInterval.cancel()
