@@ -38,7 +38,7 @@ import kotlin.system.exitProcess
         - Game area is 49x49x49 game pixels (center with 24 in every direction)
         - Each game pixel is 1x1x1 units
     TODO:
-        * Code refactoring required to run the UI (2.0)
+        * Fix window name (2.0.1)
         * UI (2.1)
         * Highscores (2.1)
         * Different camera option/control (stays close to the front of the snake) (2.1)
@@ -586,7 +586,7 @@ fun start() {
     }
     KtxAsync.launch {
         val config = Lwjgl3ApplicationConfiguration()
-        config.setTitle("Snake3DGame")
+        config.setTitle("Snake3D")
         config.setWindowIcon("org/snake3d/logo.png")
         config.setWindowedMode(800, 600)
         config.useVsync(true)
